@@ -1,0 +1,55 @@
+const getGuidFromItemId = (inventoryId, itemData, category, slotId) => {
+  const outItem = new DataView(new ArrayBuffer(8 * 13));
+
+  // INVENTORY_GET_GUID_FROM_ITEMID
+  const success = Citizen.invokeNative("0x886DFD3E185C8A89", inventoryId, itemData ? itemData : 0, category, slotId, outItem, );
+  return (success) ? outItem : null;
+};
+
+const addWardrobeInventoryItem = (itemName, slotHash) => {
+  const itemHash = GetHashKey(itemName);
+  const addReason = GetHashKey("ADD_REASON_DEFAULT");
+  const inventoryId = 1; // INVENTORY_SP_PLAYER
+
+  // _ITEMDATABASE_IS_KEY_VALID
+  const isValid = Citizen.invokeNative("0x6D5D51B188333FD1", itemHash, 0);
+  if (!isValid) return false;
+
+  const characterItem = getGuidFromItemId(inventoryId, null, GetHashKey("CHARACTER"), 0xA1212100);
+  if (!characterItem) return false;
+
+  const wardrobeItem = getGuidFromItemId(inventoryId, characterItem, GetHashKey("WARDROBE"), 0x3DABBFA7);
+  if (!wardrobeItem) return false;
+
+  const itemData = new DataView(new ArrayBuffer(8 * 13));
+
+  // _INVENTORY_ADD_ITEM_WITH_GUID
+  const isAdded = Citizen.invokeNative("0xCB5D11F9508A928D", inventoryId, itemData, wardrobeItem, itemHash, slotHash, 1, addReason);
+  if (!isAdded) return false;
+
+  // _INVENTORY_EQUIP_ITEM_WITH_GUID
+  const equipped = Citizen.invokeNative("0x734311E2852760D0", inventoryId, itemData, true);
+  return equipped;
+};
+
+const givePlayerWeapon = (weaponName, attachPoint) => {
+  const addReason = GetHashKey("ADD_REASON_DEFAULT");
+  const weaponHash = GetHashKey(weaponName);
+  const ammoCount = 100;
+
+  // _REQUEST_WEAPON_ASSET
+  Citizen.invokeNative("0x72D4CB5DB927009C", weaponHash, 0, true);
+
+  setTimeout(() => {
+    // GIVE_WEAPON_TO_PED
+    Citizen.invokeNative("0x5E3BDDBCB83F3D84", PlayerPedId(), weaponHash, ammoCount, true, false, attachPoint, true, 0.0, 0.0, addReason, true, 0.0, false);
+  }, 1000);
+};
+
+RegisterCommand("dualwield", () => {
+  addWardrobeInventoryItem("CLOTHING_ITEM_M_OFFHAND_000_TINT_004", 0xF20B6B4A);
+  addWardrobeInventoryItem("UPGRADE_OFFHAND_HOLSTER", 0x39E57B01);
+
+  givePlayerWeapon("WEAPON_PISTOL_MAUSER", 2);
+  givePlayerWeapon("WEAPON_REVOLVER_CATTLEMAN", 3);
+});
